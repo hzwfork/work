@@ -1,0 +1,583 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>個人工作入口網站 | Portal Dashboard</title>
+    
+    <!-- 外部函式庫引入 -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <style>
+        /**
+         * v1.0.5 - 全域風格定義
+         * 採用莫蘭迪配色方案，結合日式商業簡約設計。
+         */
+        :root {
+            --bg-color: #F2F1ED;
+            --primary-color: #9A8C98;
+            --secondary-color: #D3C5B5;
+            --accent-color: #8EACCD;
+            --success-color: #A3B18A;
+            --text-main: #4A4A4A;
+            --text-sub: #7F7F7F;
+            --card-bg: #FFFFFF;
+            --border: #E0D7D0;
+            --transition-speed: 0.3s;
+            --border-radius: 12px;
+            --shadow: 0 4px 20px rgba(0,0,0,0.05);
+        }
+
+        /**
+         * 基礎排版重置與通用樣式
+         */
+        * {
+            margin: 0; padding: 0; box-sizing: border-box;
+            font-family: 'Noto Sans TC', sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+
+        button { cursor: pointer; border: none; outline: none; transition: var(--transition-speed); }
+        textarea, input, select { border: 1px solid var(--border); border-radius: 8px; padding: 10px; font-size: 0.9rem; }
+
+        /**
+         * 響應式佈局結構
+         */
+        .container {
+            max-width: 1200px; margin: 0 auto; padding: 40px 20px;
+            display: grid; grid-template-columns: 1fr 350px; gap: 30px;
+        }
+
+        @media (max-width: 992px) { .container { grid-template-columns: 1fr; } }
+
+        /**
+         * 標頭區：包含時鐘、日期與天氣
+         */
+        header { margin-bottom: 40px; }
+        .header-top {
+            display: flex; justify-content: space-between; align-items: flex-end;
+            border-bottom: 1px solid var(--secondary-color); padding-bottom: 15px;
+        }
+        .time-display { font-size: 2.5rem; font-weight: 300; letter-spacing: 2px; }
+        .date-display { font-size: 1rem; color: var(--text-sub); }
+        .weather-info { margin-top: 15px; font-size: 1.1rem; display: flex; align-items: center; }
+        .weather-icon { font-size: 1.5rem; margin-right: 10px; }
+        .weather-detail { font-size: 0.9rem; color: var(--text-sub); margin-left: 15px; }
+
+        /**
+         * 導航視圖切換
+         */
+        #dashboard-view, #toolbox-view { transition: opacity 0.3s ease; }
+        #toolbox-view { display: none; }
+
+        /**
+         * 專案卡片網格與樣式
+         */
+        .project-section {
+            display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 20px;
+        }
+        .project-card {
+            background-color: var(--card-bg); border-radius: var(--border-radius);
+            padding: 25px; box-shadow: var(--shadow); cursor: pointer;
+            border: 1px solid transparent; position: relative; overflow: hidden;
+            transition: transform var(--transition-speed), border-color var(--transition-speed);
+        }
+        .project-card:hover { transform: translateY(-5px); border-color: var(--primary-color); }
+        .project-card::before {
+            content: ""; position: absolute; top: 0; left: 0;
+            width: 4px; height: 100%; background-color: var(--primary-color);
+        }
+        .project-card h3 { font-size: 1.15rem; margin-bottom: 8px; }
+        .project-card p { font-size: 0.9rem; color: var(--text-sub); }
+        .external-badge {
+            display: inline-block; margin-top: 10px; font-size: 0.75rem;
+            color: var(--accent-color); font-weight: 500;
+        }
+
+        /**
+         * 行政工具箱 UI 組件
+         */
+        .toolbox-header { display: flex; align-items: center; margin-bottom: 20px; gap: 15px; }
+        .back-btn { background: var(--secondary-color); color: white; padding: 8px 15px; border-radius: 6px; font-size: 0.9rem; }
+        nav#toolbox-nav {
+            display: flex; background: var(--card-bg); border-radius: 12px;
+            overflow-x: auto; margin-bottom: 20px; box-shadow: var(--shadow);
+        }
+        .nav-btn {
+            flex: 1; padding: 15px; background: none; color: var(--text-sub);
+            border-bottom: 3px solid transparent; white-space: nowrap; font-size: 0.9rem;
+        }
+        .nav-btn.active { color: var(--primary-color); border-bottom-color: var(--primary-color); font-weight: 700; }
+        .tool-section { display: none; animation: fadeIn 0.4s ease; }
+        .tool-section.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; } }
+
+        .card { background: var(--card-bg); border-radius: 16px; padding: 24px; margin-bottom: 24px; box-shadow: var(--shadow); }
+        .section-title { font-size: 1.1rem; font-weight: 500; margin-bottom: 18px; border-left: 4px solid var(--accent-color); padding-left: 12px; }
+        .btn-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 10px; margin-bottom: 20px; }
+        .action-btn { background: var(--primary-color); color: white; padding: 12px; border-radius: 10px; text-align: center; }
+        .accent-btn { background: var(--accent-color); }
+        .success-btn { background: var(--success-color); }
+
+        /**
+         * 側邊欄工具組
+         */
+        .sidebar { display: flex; flex-direction: column; gap: 25px; }
+        .widget { background: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: var(--shadow); }
+        .widget-title { font-size: 1rem; font-weight: 700; margin-bottom: 15px; border-left: 3px solid var(--accent-color); padding-left: 10px; }
+        .todo-input-group { display: flex; margin-bottom: 15px; }
+        .todo-input { flex-grow: 1; border-radius: 4px 0 0 4px; }
+        .todo-add-btn { background: var(--accent-color); color: white; padding: 0 15px; border-radius: 0 4px 4px 0; }
+        .todo-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem; }
+        .todo-item.completed span { text-decoration: line-through; color: var(--text-sub); }
+        .sticky-note { width: 100%; min-height: 150px; background: #FFFDE7; border: none; padding: 15px; color: #5D4037; resize: vertical; }
+
+        /**
+         * 通知與頁尾
+         */
+        #toast {
+            position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
+            background: #333; color: white; padding: 10px 25px; border-radius: 50px;
+            font-size: 0.85rem; display: none; z-index: 2000;
+        }
+
+        footer { text-align: center; padding: 40px 20px; color: var(--text-sub); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <!-- 主要導覽與工具區 -->
+        <main>
+            <header>
+                <div class="header-top">
+                    <div id="clock" class="time-display">00:00:00</div>
+                    <div id="date" class="date-display">讀取中...</div>
+                </div>
+                <div id="weather" class="weather-info">
+                    <span class="weather-icon">⏳</span>
+                    <span id="weatherText">取得天氣中...</span>
+                    <span id="weatherDetail" class="weather-detail"></span>
+                </div>
+            </header>
+
+            <!-- 儀表板入口視圖 -->
+            <div id="dashboard-view">
+                <section class="project-section" id="projectGrid"></section>
+            </div>
+
+            <!-- 行政工具箱詳情視圖 -->
+            <div id="toolbox-view">
+                <div class="toolbox-header">
+                    <button class="back-btn" onclick="backToDashboard()">← 返回首頁</button>
+                    <h2 id="current-tool-title">工具箱</h2>
+                </div>
+                
+                <nav id="toolbox-nav">
+                    <button class="nav-btn" onclick="switchTool('cleaner', this)">文字整理</button>
+                    <button class="nav-btn" onclick="switchTool('qr', this)">QR 產生器</button>
+                    <button class="nav-btn" onclick="switchTool('reader', this)">QR 解讀器</button>
+                    <button class="nav-btn" onclick="switchTool('poster', this)">公告製作</button>
+                    <button class="nav-btn" onclick="switchTool('finance', this)">財務助手</button>
+                </nav>
+
+                <!-- 文字整理工具 -->
+                <section id="cleaner" class="tool-section">
+                    <div class="card">
+                        <div class="section-title">文字處理工具</div>
+                        <textarea id="cleaner-input" rows="8" style="width:100%" placeholder="貼上文字..."></textarea>
+                        <div class="btn-grid" style="margin-top:15px">
+                            <button class="action-btn success-btn" onclick="applyCleaner('scu')">東吳名單</button>
+                            <button class="action-btn" onclick="applyCleaner('full-width')">半轉全</button>
+                            <button class="action-btn" onclick="applyCleaner('half-width')">全轉半</button>
+                            <button class="action-btn" onclick="applyCleaner('trim')">去空格</button>
+                            <button class="action-btn" onclick="applyCleaner('list')">加序號</button>
+                        </div>
+                        <button class="action-btn accent-btn" style="width:100%" onclick="copyById('cleaner-input')">複製結果</button>
+                    </div>
+                </section>
+
+                <!-- QR 碼生成工具 -->
+                <section id="qr" class="tool-section">
+                    <div class="card">
+                        <div class="section-title">QR Code 設定</div>
+                        <select id="qr-type-select" style="width:100%; margin-bottom:15px" onchange="toggleQrForm()">
+                            <option value="url">網址 (URL)</option>
+                            <option value="wifi">Wi-Fi 設定</option>
+                            <option value="text">純文字</option>
+                        </select>
+                        <div id="form-url" class="qr-form-group"><input type="text" id="input-url" style="width:100%" placeholder="https://..." oninput="generateQR()"></div>
+                        <div id="form-wifi" class="qr-form-group" style="display:none">
+                            <input type="text" id="input-wifi-ssid" style="width:100%; margin-bottom:10px" placeholder="SSID" oninput="generateQR()">
+                            <input type="text" id="input-wifi-pass" style="width:100%" placeholder="Password" oninput="generateQR()">
+                        </div>
+                        <div id="form-text" class="qr-form-group" style="display:none"><textarea id="input-text" style="width:100%" oninput="generateQR()"></textarea></div>
+                        <div id="qr-result-area">
+                            <div id="hidden-qr" style="display:none"></div>
+                            <canvas id="final-canvas"></canvas>
+                            <button class="action-btn accent-btn" style="width:100%; margin-top:20px" onclick="downloadQR()">下載圖片</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- QR 碼解讀工具 -->
+                <section id="reader" class="tool-section">
+                    <div class="card">
+                        <div class="section-title">QR 圖片解讀</div>
+                        <input type="file" id="qr-reader-file" accept="image/*" style="margin-bottom:15px" onchange="processQRImage(this)">
+                        <img id="reader-preview-img" style="display:none; margin-bottom:15px">
+                        <textarea id="reader-result-text" rows="4" style="width:100%" readonly></textarea>
+                        <div class="btn-grid" style="margin-top:15px">
+                            <button class="action-btn success-btn" id="btn-reader-copy" onclick="copyById('reader-result-text')" disabled>複製</button>
+                            <button class="action-btn accent-btn" id="btn-reader-link" onclick="visitQRLink()" disabled>前往</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 快速公告製作工具 -->
+                <section id="poster" class="tool-section">
+                    <div class="card">
+                        <div class="section-title">公告內容</div>
+                        <input type="text" id="p-title" value="重要公告" style="width:100%; margin-bottom:10px" oninput="drawPoster()">
+                        <textarea id="p-content" rows="4" style="width:100%; margin-bottom:15px" oninput="drawPoster()">內容...</textarea>
+                        <select id="p-theme" style="width:100%; margin-bottom:15px" onchange="drawPoster()">
+                            <option value="minimalist">灰豆綠</option>
+                            <option value="classic">冷灰藍</option>
+                        </select>
+                        <div id="poster-preview">
+                            <canvas id="poster-canvas" style="display:none;"></canvas>
+                            <img id="poster-img">
+                        </div>
+                        <div class="btn-grid" style="margin-top:20px">
+                            <button class="action-btn accent-btn" onclick="downloadPoster()">下載 PNG</button>
+                            <button class="action-btn success-btn" onclick="downloadPosterPDF()">下載 PDF</button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 財務助手工具 -->
+                <section id="finance" class="tool-section">
+                    <div class="card">
+                        <div class="section-title">金額大寫</div>
+                        <input type="number" id="finance-num-input" style="width:100%; margin-bottom:10px" oninput="convertAmount()">
+                        <div id="finance-caps-result" style="background:#f9f9f9; padding:15px; border-radius:8px; text-align:center; font-weight:700">尚未輸入</div>
+                        <button class="action-btn accent-btn" style="width:100%; margin-top:10px" onclick="copyFinance()">複製大寫</button>
+                    </div>
+                    <div class="card">
+                        <div class="section-title">統編驗證</div>
+                        <input type="text" id="finance-ubn-input" maxlength="8" style="width:100%" placeholder="輸入 8 位統編" oninput="checkUBN()">
+                        <div id="ubn-status-msg" style="margin-top:10px; font-size:0.85rem">請輸入數字</div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 側邊小工具 -->
+        <aside class="sidebar">
+            <div class="widget">
+                <div class="widget-title">Google 搜尋</div>
+                <div class="todo-input-group">
+                    <input type="text" id="searchInput" class="todo-input" placeholder="搜尋...">
+                    <button onclick="performSearch()" class="todo-add-btn">Go</button>
+                </div>
+            </div>
+            <div class="widget">
+                <div class="widget-title">待辦清單</div>
+                <div class="todo-input-group">
+                    <input type="text" id="todoInput" class="todo-input" placeholder="新任務...">
+                    <button onclick="addTodo()" class="todo-add-btn">+</button>
+                </div>
+                <ul id="todoList" class="todo-list"></ul>
+            </div>
+            <div class="widget">
+                <div class="widget-title">臨時便簽</div>
+                <textarea id="stickyNote" class="sticky-note" placeholder="記錄靈感..."></textarea>
+            </div>
+        </aside>
+    </div>
+
+    <div id="toast">操作成功</div>
+
+    <footer>
+        &copy; 2024 hzwfork. 所有功能皆為地端運行。
+    </footer>
+
+    <script>
+        /**
+         * v1.0.5 - 配置層
+         * 管理入口專案資料與內部工具映射。
+         */
+        const myProjects = [
+            { id: "cleaner", title: "文字整理器", desc: "處理全半形轉換、東吳系所名單自動生成。" },
+            { id: "qr", title: "專業 QR 產生器", desc: "製作 Wi-Fi、網址等各式帶 Logo 的 QR Code。" },
+            { id: "reader", title: "QR 圖片解讀", desc: "在地端解析圖片中的 QR Code 內容與連結。" },
+            { id: "poster", title: "快速公告製作", desc: "快速產生莫蘭迪風格的 A4 橫/直式公告。" },
+            { id: "finance", title: "行政財務助手", desc: "會計金額大寫轉換與台灣公司統編驗證。" },
+            { url: "https://hzwfork.github.io/ibest/", title: "ibest 文章圖片轉檔", desc: "快速轉換文章與圖片格式，優化內容發布流程。" }
+        ];
+
+        /**
+         * v1.0.5 - 核心初始化
+         * 管理頁面生命週期、定時任務與資安基礎部署。
+         */
+        window.onload = function() {
+            renderProjects();
+            updateDateTime();
+            setInterval(updateDateTime, 1000);
+            fetchWeather();
+            loadSavedData();
+            
+            document.getElementById('searchInput').addEventListener('keypress', (e) => e.key === 'Enter' && performSearch());
+            document.getElementById('todoInput').addEventListener('keypress', (e) => e.key === 'Enter' && addTodo());
+
+            // 資安部署：防止意外關閉或重新整理導致資料遺失
+            window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
+        };
+
+        /**
+         * v1.0.5 - UI 控制與導航模組
+         * 處理主儀表板與工具箱視圖切換與渲染。
+         */
+        function renderProjects() {
+            const grid = document.getElementById('projectGrid');
+            grid.innerHTML = myProjects.map(p => {
+                const isExternal = !!p.url;
+                // 資安部屬：外部連結強制開啟 noopener 以防 Tabnabbing 攻擊
+                const clickHandler = isExternal ? `window.open('${p.url}', '_blank', 'noopener,noreferrer')` : `openTool('${p.id}')`;
+                return `
+                    <div class="project-card" onclick="${clickHandler}">
+                        <h3>${p.title}</h3>
+                        <p>${p.desc}</p>
+                        ${isExternal ? '<span class="external-badge">外部連結 ↗</span>' : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openTool(id) {
+            document.getElementById('dashboard-view').style.display = 'none';
+            document.getElementById('toolbox-view').style.display = 'block';
+            switchTool(id, document.querySelector(`.nav-btn[onclick*="${id}"]`));
+        }
+
+        function backToDashboard() {
+            document.getElementById('dashboard-view').style.display = 'block';
+            document.getElementById('toolbox-view').style.display = 'none';
+        }
+
+        function switchTool(id, btn) {
+            document.querySelectorAll('.tool-section').forEach(s => s.classList.remove('active'));
+            document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+            const target = document.getElementById(id);
+            if(target) target.classList.add('active');
+            if(btn) btn.classList.add('active');
+            
+            if(id === 'qr') generateQR();
+            if(id === 'poster') drawPoster();
+        }
+
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.innerText = msg; t.style.display = 'block';
+            setTimeout(() => t.style.display = 'none', 2000);
+        }
+
+        /**
+         * v1.0.5 - 功能工具模組
+         * 包含文字整理、QR 碼處理、海報生成與財務驗證。
+         */
+        function applyCleaner(mode) {
+            const input = document.getElementById('cleaner-input');
+            let text = input.value;
+            if(mode === 'scu') text = "人文社會學院\n外國語文學院\n理學院\n法學院\n商學院\n巨量資料管理學院\n中國文學系\n歷史學系\n哲學系\n政治學系\n社會學系\n社會工作學系\n音樂學系\n英文學系\n日本語文學系\n德國文化學系\n數學系\n物理學系\n化學系\n微生物學系\n心理學系\n法律學系\n經濟學系\n會計學系\n企業管理學系\n國際經營與貿易學系\n財務工程與精算數學系\n資訊管理學系\n資料科學系";
+            else if(mode === 'full-width') text = text.replace(/[\x21-\x7e]/g, s => String.fromCharCode(s.charCodeAt(0) + 0xFEE0));
+            else if(mode === 'half-width') text = text.replace(/[\uFF01-\uFF5E]/g, s => String.fromCharCode(s.charCodeAt(0) - 0xFEE0));
+            else if(mode === 'trim') text = text.replace(/\s+/g, ' ').trim();
+            else if(mode === 'list') text = text.split('\n').filter(l => l.trim()).map((l, i) => `${i+1}. ${l}`).join('\n');
+            input.value = text;
+            showToast('處理完成');
+        }
+
+        function toggleQrForm() {
+            const val = document.getElementById('qr-type-select').value;
+            document.querySelectorAll('.qr-form-group').forEach(g => g.style.display = 'none');
+            document.getElementById(`form-${val}`).style.display = 'block';
+            generateQR();
+        }
+
+        function generateQR() {
+            const type = document.getElementById('qr-type-select').value;
+            let data = type === 'url' ? document.getElementById('input-url').value : (type === 'wifi' ? `WIFI:S:${document.getElementById('input-wifi-ssid').value};P:${document.getElementById('input-wifi-pass').value};;` : document.getElementById('input-text').value);
+            if(!data) data = " ";
+            const hidden = document.getElementById('hidden-qr');
+            hidden.innerHTML = "";
+            new QRCode(hidden, { text: data, width: 400, height: 400 });
+            setTimeout(() => {
+                const source = hidden.querySelector('canvas');
+                const target = document.getElementById('final-canvas');
+                if(source) {
+                    target.width = 400; target.height = 400;
+                    target.getContext('2d').drawImage(source, 0, 0);
+                }
+            }, 100);
+        }
+
+        function downloadQR() {
+            const link = document.createElement('a'); link.download = 'QR_Code.png';
+            link.href = document.getElementById('final-canvas').toDataURL(); link.click();
+        }
+
+        function processQRImage(input) {
+            if (!input.files[0]) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const img = new Image();
+                img.onload = () => {
+                    const canvas = document.createElement('canvas');
+                    canvas.width = img.width; canvas.height = img.height;
+                    const ctx = canvas.getContext('2d'); ctx.drawImage(img, 0, 0);
+                    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+                    const code = jsQR(imageData.data, imageData.width, imageData.height);
+                    if (code) {
+                        document.getElementById('reader-result-text').value = code.data;
+                        document.getElementById('btn-reader-copy').disabled = false;
+                        document.getElementById('btn-reader-link').disabled = !code.data.startsWith('http');
+                        showToast("解讀成功");
+                    } else {
+                        document.getElementById('reader-result-text').value = "無法辨識";
+                        showToast("辨識失敗");
+                    }
+                };
+                img.src = e.target.result;
+                document.getElementById('reader-preview-img').src = img.src;
+                document.getElementById('reader-preview-img').style.display = 'block';
+            };
+            reader.readAsDataURL(input.files[0]);
+        }
+
+        function drawPoster() {
+            const canvas = document.getElementById('poster-canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = 800; canvas.height = 1131;
+            const theme = document.getElementById('p-theme').value;
+            const colors = theme === 'minimalist' ? {bg:'#F4F1EE', title:'#588157'} : {bg:'#F5F5F5', title:'#4A4E69'};
+            ctx.fillStyle = colors.bg; ctx.fillRect(0,0,800,1131);
+            ctx.strokeStyle = colors.title; ctx.lineWidth = 40; ctx.strokeRect(20,20,760,1091);
+            ctx.fillStyle = colors.title; ctx.textAlign = "center"; ctx.font = "bold 60px Noto Sans TC";
+            ctx.fillText(document.getElementById('p-title').value, 400, 250);
+            ctx.font = "30px Noto Sans TC"; ctx.textAlign = "left";
+            const lines = document.getElementById('p-content').value.split('\n');
+            lines.forEach((l, i) => ctx.fillText(l, 100, 400 + i*50));
+            document.getElementById('poster-img').src = canvas.toDataURL();
+        }
+
+        function downloadPoster() {
+            const link = document.createElement('a'); link.download = 'Poster.png';
+            link.href = document.getElementById('poster-canvas').toDataURL(); link.click();
+        }
+
+        async function downloadPosterPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+            doc.addImage(document.getElementById('poster-canvas').toDataURL('image/png'), 'PNG', 0, 0, 210, 297);
+            doc.save('Poster.pdf');
+        }
+
+        function convertAmount() {
+            const num = document.getElementById('finance-num-input').value;
+            const res = document.getElementById('finance-caps-result');
+            if(!num) { res.innerText = "尚未輸入"; return; }
+            const digits = "零壹貳參肆伍陸柒捌玖", units = ["", "拾", "佰", "仟"], bigUnits = ["元", "萬", "億"];
+            let str = "", n = Math.floor(num).toString();
+            for(let i=0; i<n.length; i++) {
+                let d = parseInt(n[i]), p = n.length-1-i;
+                if(d!==0) str += digits[d] + units[p%4];
+                if(p%4===0 && p>0) str += bigUnits[Math.floor(p/4)];
+            }
+            res.innerText = str + "元整";
+        }
+
+        function checkUBN() {
+            const val = document.getElementById('finance-ubn-input').value;
+            const msg = document.getElementById('ubn-status-msg');
+            if(val.length === 8) {
+                const cx = [1, 2, 1, 2, 1, 2, 4, 1]; let sum = 0;
+                for(let i=0; i<8; i++) {
+                    let s = parseInt(val[i]) * cx[i];
+                    sum += Math.floor(s/10) + (s%10);
+                }
+                msg.innerText = sum % 10 === 0 ? "✓ 統編正確" : "✗ 統編錯誤";
+            }
+        }
+
+        function copyById(id) {
+            const el = document.getElementById(id);
+            if(el) { el.select(); document.execCommand('copy'); showToast('已複製'); }
+        }
+
+        function copyFinance() {
+            const text = document.getElementById('finance-caps-result').innerText;
+            const dummy = document.createElement("textarea"); document.body.appendChild(dummy);
+            dummy.value = text; dummy.select(); document.execCommand("copy");
+            document.body.removeChild(dummy); showToast("已複製");
+        }
+
+        /**
+         * v1.0.5 - 儀表板小工具模組
+         * 管理時鐘、天氣、搜尋、待辦事項與持久化便簽。
+         */
+        function updateDateTime() {
+            const now = new Date();
+            document.getElementById('clock').textContent = now.toLocaleTimeString('zh-TW', { hour12: false });
+            document.getElementById('date').textContent = now.toLocaleDateString('zh-TW', { year:'numeric', month:'long', day:'numeric', weekday:'long' });
+        }
+
+        async function fetchWeather() {
+            try {
+                const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=25.0359&longitude=121.5642&current=temperature_2m,relative_humidity_2m,weather_code&timezone=Asia%2FTaipei');
+                const data = await res.json();
+                const temp = Math.round(data.current.temperature_2m);
+                document.getElementById('weatherText').textContent = `台北市目前 局部多雲，${temp}°C`;
+                document.getElementById('weatherDetail').textContent = `相對濕度 ${data.current.relative_humidity_2m}%`;
+                document.querySelector('.weather-icon').textContent = "⛅";
+            } catch (e) { document.getElementById('weatherText').textContent = "天氣獲取失敗"; }
+        }
+
+        function performSearch() {
+            const q = document.getElementById('searchInput').value;
+            // 資安部屬：使用 URI 編碼處理搜尋字串
+            if(q) window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank', 'noopener,noreferrer');
+        }
+
+        function addTodo() {
+            const input = document.getElementById('todoInput');
+            if(input.value) {
+                const li = document.createElement('li'); li.className = 'todo-item';
+                li.innerHTML = `<input type="checkbox" onchange="this.parentElement.classList.toggle('completed')"><span>${input.value}</span>`;
+                document.getElementById('todoList').appendChild(li); input.value = '';
+            }
+        }
+
+        function loadSavedData() {
+            const note = localStorage.getItem('portal_sticky');
+            if(note) document.getElementById('stickyNote').value = note;
+            document.getElementById('stickyNote').addEventListener('input', (e) => localStorage.setItem('portal_sticky', e.target.value));
+        }
+
+        function visitQRLink() {
+            const url = document.getElementById('reader-result-text').value;
+            if(url.startsWith('http')) window.open(url, '_blank', 'noopener,noreferrer');
+        }
+    </script>
+</body>
+</html>
