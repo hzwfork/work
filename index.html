@@ -13,7 +13,7 @@
 
     <style>
         /**
-         * v1.0.6 - 全域風格定義
+         * v1.0.7 - 全域風格定義
          * 採用莫蘭迪配色方案，結合日式商業簡約設計。
          */
         :root {
@@ -130,7 +130,7 @@
         .success-btn { background: var(--success-color); }
 
         /**
-         * 側邊欄工具組：優化待辦清單樣式
+         * 側邊欄工具組
          */
         .sidebar { display: flex; flex-direction: column; gap: 25px; }
         .widget { background: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: var(--shadow); }
@@ -215,7 +215,7 @@
                     <button class="nav-btn" onclick="switchTool('finance', this)">財務助手</button>
                 </nav>
 
-                <!-- 文字整理工具 -->
+                <!-- 行政工具區塊實作 -->
                 <section id="cleaner" class="tool-section">
                     <div class="card">
                         <div class="section-title">文字處理工具</div>
@@ -231,7 +231,6 @@
                     </div>
                 </section>
 
-                <!-- QR 碼生成工具 -->
                 <section id="qr" class="tool-section">
                     <div class="card">
                         <div class="section-title">QR Code 設定</div>
@@ -254,7 +253,6 @@
                     </div>
                 </section>
 
-                <!-- QR 碼解讀工具 -->
                 <section id="reader" class="tool-section">
                     <div class="card">
                         <div class="section-title">QR 圖片解讀</div>
@@ -268,7 +266,6 @@
                     </div>
                 </section>
 
-                <!-- 快速公告製作工具 -->
                 <section id="poster" class="tool-section">
                     <div class="card">
                         <div class="section-title">公告內容</div>
@@ -289,7 +286,6 @@
                     </div>
                 </section>
 
-                <!-- 財務助手工具 -->
                 <section id="finance" class="tool-section">
                     <div class="card">
                         <div class="section-title">金額大寫</div>
@@ -338,7 +334,7 @@
 
     <script>
         /**
-         * v1.0.6 - 配置層
+         * v1.0.7 - 配置層
          * 管理入口專案資料與內部工具映射。
          */
         const myProjects = [
@@ -351,8 +347,8 @@
         ];
 
         /**
-         * v1.0.6 - 核心初始化
-         * 管理頁面生命週期、定時任務與資安基礎部署。
+         * v1.0.7 - 核心初始化與資安監控
+         * 管理頁面生命週期、定時任務與 BeforeUnload 彈窗。
          */
         window.onload = function() {
             renderProjects();
@@ -361,16 +357,24 @@
             fetchWeather();
             loadSavedData();
             
+            // 事件監聽綁定
             document.getElementById('searchInput').addEventListener('keypress', (e) => e.key === 'Enter' && performSearch());
             document.getElementById('todoInput').addEventListener('keypress', (e) => e.key === 'Enter' && addTodo());
 
-            // 資安部署：防止意外關閉或重新整理導致資料遺失
-            window.addEventListener('beforeunload', (e) => { e.preventDefault(); e.returnValue = ''; });
+            /**
+             * 資安部署：防止意外關閉 (BeforeUnload)
+             * 備註：依據瀏覽器政策，需使用者與頁面有互動後(User Activation)才會生效。
+             */
+            window.onbeforeunload = function(e) {
+                const message = "確定要離開嗎？尚未儲存的變動可能會遺失。";
+                e = e || window.event;
+                if (e) { e.returnValue = message; }
+                return message;
+            };
         };
 
         /**
-         * v1.0.6 - UI 控制與導航模組
-         * 處理主儀表板與工具箱視圖切換與渲染。
+         * v1.0.7 - UI 控制與導航模組
          */
         function renderProjects() {
             const grid = document.getElementById('projectGrid');
@@ -416,8 +420,7 @@
         }
 
         /**
-         * v1.0.6 - 功能工具模組
-         * 包含文字整理、QR 碼處理、海報生成與財務驗證。
+         * v1.0.7 - 行政工具組件實作
          */
         function applyCleaner(mode) {
             const input = document.getElementById('cleaner-input');
@@ -556,8 +559,7 @@
         }
 
         /**
-         * v1.0.6 - 儀表板小工具模組
-         * 管理時鐘、天氣、搜尋、待辦事項與持久化存儲。
+         * v1.0.7 - 小工具模組
          */
         function updateDateTime() {
             const now = new Date();
@@ -581,10 +583,6 @@
             if(q) window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank', 'noopener,noreferrer');
         }
 
-        /**
-         * v1.0.6 - 待辦清單核心邏輯
-         * 包含新增、切換狀態、刪除與本地儲存同步。
-         */
         function addTodo(text = null) {
             const input = document.getElementById('todoInput');
             const taskText = text || input.value.trim();
@@ -599,10 +597,7 @@
                     <button class="todo-del-btn" onclick="deleteTodo(this)">✕</button>
                 `;
                 document.getElementById('todoList').appendChild(li);
-                if(!text) {
-                    input.value = '';
-                    saveTodos();
-                }
+                if(!text) { input.value = ''; saveTodos(); }
             }
         }
 
@@ -616,10 +611,7 @@
             const item = btn.parentElement;
             item.style.opacity = '0';
             item.style.transform = 'translateX(20px)';
-            setTimeout(() => {
-                item.remove();
-                saveTodos();
-            }, 300);
+            setTimeout(() => { item.remove(); saveTodos(); }, 300);
         }
 
         function saveTodos() {
@@ -634,12 +626,10 @@
         }
 
         function loadSavedData() {
-            // 載入便簽
             const note = localStorage.getItem('portal_sticky');
             if(note) document.getElementById('stickyNote').value = note;
             document.getElementById('stickyNote').addEventListener('input', (e) => localStorage.setItem('portal_sticky', e.target.value));
             
-            // 載入待辦事項
             const savedTodos = localStorage.getItem('portal_todos');
             if(savedTodos) {
                 const todos = JSON.parse(savedTodos);
