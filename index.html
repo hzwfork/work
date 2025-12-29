@@ -13,7 +13,7 @@
 
     <style>
         /**
-         * v1.0.5 - 全域風格定義
+         * v1.0.6 - 全域風格定義
          * 採用莫蘭迪配色方案，結合日式商業簡約設計。
          */
         :root {
@@ -130,16 +130,40 @@
         .success-btn { background: var(--success-color); }
 
         /**
-         * 側邊欄工具組
+         * 側邊欄工具組：優化待辦清單樣式
          */
         .sidebar { display: flex; flex-direction: column; gap: 25px; }
         .widget { background: var(--card-bg); border-radius: var(--border-radius); padding: 20px; box-shadow: var(--shadow); }
         .widget-title { font-size: 1rem; font-weight: 700; margin-bottom: 15px; border-left: 3px solid var(--accent-color); padding-left: 10px; }
+        
         .todo-input-group { display: flex; margin-bottom: 15px; }
         .todo-input { flex-grow: 1; border-radius: 4px 0 0 4px; }
         .todo-add-btn { background: var(--accent-color); color: white; padding: 0 15px; border-radius: 0 4px 4px 0; }
-        .todo-item { display: flex; align-items: center; padding: 8px 0; border-bottom: 1px solid #f5f5f5; font-size: 0.9rem; }
-        .todo-item.completed span { text-decoration: line-through; color: var(--text-sub); }
+        
+        .todo-list { list-style: none; }
+        .todo-item { 
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 10px 5px; border-bottom: 1px solid #f0f0f0; font-size: 0.9rem; 
+            transition: background 0.2s;
+        }
+        .todo-item:hover { background-color: #fafafa; }
+        .todo-content { display: flex; align-items: center; gap: 10px; flex: 1; }
+        .todo-item input[type="checkbox"] { cursor: pointer; width: 16px; height: 16px; }
+        
+        .todo-item.completed span { 
+            text-decoration: line-through; 
+            color: var(--text-sub); 
+            opacity: 0.5; 
+            transition: all 0.3s;
+        }
+        
+        .todo-del-btn {
+            background: none; color: #d1d1d1; font-size: 1rem; 
+            padding: 0 5px; opacity: 0; transition: all 0.2s;
+        }
+        .todo-item:hover .todo-del-btn { opacity: 1; color: var(--text-sub); }
+        .todo-del-btn:hover { color: #B07D62 !important; }
+
         .sticky-note { width: 100%; min-height: 150px; background: #FFFDE7; border: none; padding: 15px; color: #5D4037; resize: vertical; }
 
         /**
@@ -314,7 +338,7 @@
 
     <script>
         /**
-         * v1.0.5 - 配置層
+         * v1.0.6 - 配置層
          * 管理入口專案資料與內部工具映射。
          */
         const myProjects = [
@@ -327,7 +351,7 @@
         ];
 
         /**
-         * v1.0.5 - 核心初始化
+         * v1.0.6 - 核心初始化
          * 管理頁面生命週期、定時任務與資安基礎部署。
          */
         window.onload = function() {
@@ -345,14 +369,13 @@
         };
 
         /**
-         * v1.0.5 - UI 控制與導航模組
+         * v1.0.6 - UI 控制與導航模組
          * 處理主儀表板與工具箱視圖切換與渲染。
          */
         function renderProjects() {
             const grid = document.getElementById('projectGrid');
             grid.innerHTML = myProjects.map(p => {
                 const isExternal = !!p.url;
-                // 資安部屬：外部連結強制開啟 noopener 以防 Tabnabbing 攻擊
                 const clickHandler = isExternal ? `window.open('${p.url}', '_blank', 'noopener,noreferrer')` : `openTool('${p.id}')`;
                 return `
                     <div class="project-card" onclick="${clickHandler}">
@@ -393,7 +416,7 @@
         }
 
         /**
-         * v1.0.5 - 功能工具模組
+         * v1.0.6 - 功能工具模組
          * 包含文字整理、QR 碼處理、海報生成與財務驗證。
          */
         function applyCleaner(mode) {
@@ -533,8 +556,8 @@
         }
 
         /**
-         * v1.0.5 - 儀表板小工具模組
-         * 管理時鐘、天氣、搜尋、待辦事項與持久化便簽。
+         * v1.0.6 - 儀表板小工具模組
+         * 管理時鐘、天氣、搜尋、待辦事項與持久化存儲。
          */
         function updateDateTime() {
             const now = new Date();
@@ -555,23 +578,81 @@
 
         function performSearch() {
             const q = document.getElementById('searchInput').value;
-            // 資安部屬：使用 URI 編碼處理搜尋字串
             if(q) window.open(`https://www.google.com/search?q=${encodeURIComponent(q)}`, '_blank', 'noopener,noreferrer');
         }
 
-        function addTodo() {
+        /**
+         * v1.0.6 - 待辦清單核心邏輯
+         * 包含新增、切換狀態、刪除與本地儲存同步。
+         */
+        function addTodo(text = null) {
             const input = document.getElementById('todoInput');
-            if(input.value) {
-                const li = document.createElement('li'); li.className = 'todo-item';
-                li.innerHTML = `<input type="checkbox" onchange="this.parentElement.classList.toggle('completed')"><span>${input.value}</span>`;
-                document.getElementById('todoList').appendChild(li); input.value = '';
+            const taskText = text || input.value.trim();
+            if(taskText) {
+                const li = document.createElement('li');
+                li.className = 'todo-item';
+                li.innerHTML = `
+                    <div class="todo-content">
+                        <input type="checkbox" onchange="toggleTodo(this)">
+                        <span>${taskText}</span>
+                    </div>
+                    <button class="todo-del-btn" onclick="deleteTodo(this)">✕</button>
+                `;
+                document.getElementById('todoList').appendChild(li);
+                if(!text) {
+                    input.value = '';
+                    saveTodos();
+                }
             }
         }
 
+        function toggleTodo(checkbox) {
+            const item = checkbox.parentElement.parentElement;
+            item.classList.toggle('completed', checkbox.checked);
+            saveTodos();
+        }
+
+        function deleteTodo(btn) {
+            const item = btn.parentElement;
+            item.style.opacity = '0';
+            item.style.transform = 'translateX(20px)';
+            setTimeout(() => {
+                item.remove();
+                saveTodos();
+            }, 300);
+        }
+
+        function saveTodos() {
+            const todos = [];
+            document.querySelectorAll('.todo-item').forEach(item => {
+                todos.push({
+                    text: item.querySelector('span').innerText,
+                    completed: item.querySelector('input[type="checkbox"]').checked
+                });
+            });
+            localStorage.setItem('portal_todos', JSON.stringify(todos));
+        }
+
         function loadSavedData() {
+            // 載入便簽
             const note = localStorage.getItem('portal_sticky');
             if(note) document.getElementById('stickyNote').value = note;
             document.getElementById('stickyNote').addEventListener('input', (e) => localStorage.setItem('portal_sticky', e.target.value));
+            
+            // 載入待辦事項
+            const savedTodos = localStorage.getItem('portal_todos');
+            if(savedTodos) {
+                const todos = JSON.parse(savedTodos);
+                todos.forEach(todo => {
+                    addTodo(todo.text);
+                    const lastItem = document.getElementById('todoList').lastElementChild;
+                    if(todo.completed) {
+                        const checkbox = lastItem.querySelector('input[type="checkbox"]');
+                        checkbox.checked = true;
+                        lastItem.classList.add('completed');
+                    }
+                });
+            }
         }
 
         function visitQRLink() {
