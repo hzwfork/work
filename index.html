@@ -13,7 +13,7 @@
 
     <style>
         /**
-         * v1.0.7 - 全域風格定義
+         * v1.0.8 - 全域風格定義
          * 採用莫蘭迪配色方案，結合日式商業簡約設計。
          */
         :root {
@@ -70,7 +70,7 @@
         }
         .time-display { font-size: 2.5rem; font-weight: 300; letter-spacing: 2px; }
         .date-display { font-size: 1rem; color: var(--text-sub); }
-        .weather-info { margin-top: 15px; font-size: 1.1rem; display: flex; align-items: center; }
+        .weather-info { margin-top: 15px; font-size: 1.1rem; display: flex; align-items: center; color: var(--text-main); }
         .weather-icon { font-size: 1.5rem; margin-right: 10px; }
         .weather-detail { font-size: 0.9rem; color: var(--text-sub); margin-left: 15px; }
 
@@ -334,7 +334,7 @@
 
     <script>
         /**
-         * v1.0.7 - 配置層
+         * v1.0.8 - 配置層
          * 管理入口專案資料與內部工具映射。
          */
         const myProjects = [
@@ -347,8 +347,8 @@
         ];
 
         /**
-         * v1.0.7 - 核心初始化與資安監控
-         * 管理頁面生命週期、定時任務與 BeforeUnload 彈窗。
+         * v1.0.8 - 核心初始化
+         * 管理頁面生命週期、定時任務與資安監控。
          */
         window.onload = function() {
             renderProjects();
@@ -360,21 +360,12 @@
             // 事件監聽綁定
             document.getElementById('searchInput').addEventListener('keypress', (e) => e.key === 'Enter' && performSearch());
             document.getElementById('todoInput').addEventListener('keypress', (e) => e.key === 'Enter' && addTodo());
-
-            /**
-             * 資安部署：防止意外關閉 (BeforeUnload)
-             * 備註：依據瀏覽器政策，需使用者與頁面有互動後(User Activation)才會生效。
-             */
-            window.onbeforeunload = function(e) {
-                const message = "確定要離開嗎？尚未儲存的變動可能會遺失。";
-                e = e || window.event;
-                if (e) { e.returnValue = message; }
-                return message;
-            };
+            
+            // 已依需求移除 BeforeUnload 提示功能
         };
 
         /**
-         * v1.0.7 - UI 控制與導航模組
+         * v1.0.8 - UI 控制與導航模組
          */
         function renderProjects() {
             const grid = document.getElementById('projectGrid');
@@ -420,7 +411,7 @@
         }
 
         /**
-         * v1.0.7 - 行政工具組件實作
+         * v1.0.8 - 行政工具組件實作
          */
         function applyCleaner(mode) {
             const input = document.getElementById('cleaner-input');
@@ -559,7 +550,7 @@
         }
 
         /**
-         * v1.0.7 - 小工具模組
+         * v1.0.8 - 小工具模組
          */
         function updateDateTime() {
             const now = new Date();
